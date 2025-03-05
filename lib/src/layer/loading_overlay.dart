@@ -4,7 +4,7 @@ import 'package:supercluster/supercluster.dart';
 
 class LoadingOverlay extends StatelessWidget {
   final Future<Supercluster<Marker>> superclusterFuture;
-  final WidgetBuilder? loadingOverlayBuilder;
+  final Function(ConnectionState)? loadingOverlayBuilder;
 
   const LoadingOverlay({
     super.key,
@@ -17,11 +17,7 @@ class LoadingOverlay extends StatelessWidget {
     return FutureBuilder<Supercluster<Marker>>(
       future: superclusterFuture,
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.done) {
-          return const SizedBox.shrink();
-        }
-
-        return loadingOverlayBuilder?.call(context) ??
+        return loadingOverlayBuilder?.call(snapshot.connectionState) ??
             Container(
               color: Colors.black26,
               child: const Center(

@@ -39,7 +39,7 @@ class SuperclusterLayerImpl extends StatefulWidget {
   final ClusterDataBase Function(Marker marker)? clusterDataExtractor;
   final MoveMapCallback? moveMap;
   final void Function(Marker)? onMarkerTap;
-  final WidgetBuilder? loadingOverlayBuilder;
+  final Function(ConnectionState)? loadingOverlayBuilder;
   final PopupOptionsImpl? popupOptions;
   final Size clusterWidgetSize;
   final Alignment clusterAlignment;
@@ -73,7 +73,8 @@ class SuperclusterLayerImpl extends StatefulWidget {
   State<SuperclusterLayerImpl> createState() => _SuperclusterLayerImplState();
 }
 
-class _SuperclusterLayerImplState extends State<SuperclusterLayerImpl> with TickerProviderStateMixin {
+class _SuperclusterLayerImplState extends State<SuperclusterLayerImpl>
+    with TickerProviderStateMixin {
   late SuperclusterConfigImpl _superclusterConfig;
 
   late final ExpandedClusterManager _expandedClusterManager;
@@ -85,16 +86,19 @@ class _SuperclusterLayerImplState extends State<SuperclusterLayerImpl> with Tick
 
   PopupState? _popupState;
 
-  CancelableCompleter<Supercluster<Marker>> _superclusterCompleter = CancelableCompleter();
+  CancelableCompleter<Supercluster<Marker>> _superclusterCompleter =
+      CancelableCompleter();
 
   @override
   void initState() {
     super.initState();
 
     _lastMovementZoom = widget.mapCamera.zoom.ceil();
-    _controllerSubscription = widget.controller?.stream.listen((superclusterEvent) => _onSuperclusterEvent(superclusterEvent));
+    _controllerSubscription = widget.controller?.stream
+        .listen((superclusterEvent) => _onSuperclusterEvent(superclusterEvent));
 
-    _movementStreamSubscription = widget.mapController.mapEventStream.listen((_) => _onMove());
+    _movementStreamSubscription =
+        widget.mapController.mapEventStream.listen((_) => _onMove());
 
     _superclusterConfig = SuperclusterConfigImpl(
       isMutableSupercluster: widget.isMutableSupercluster,
@@ -113,7 +117,9 @@ class _SuperclusterLayerImplState extends State<SuperclusterLayerImpl> with Tick
         // popups ourselves.
 
         widget.popupOptions?.popupController.hidePopupsOnlyFor(
-          expandedClusters.expand((expandedCluster) => expandedCluster.markers).toList(),
+          expandedClusters
+              .expand((expandedCluster) => expandedCluster.markers)
+              .toList(),
         );
       },
       onRemoved: (expandedClusters) => setState(() {}),
@@ -139,25 +145,34 @@ class _SuperclusterLayerImplState extends State<SuperclusterLayerImpl> with Tick
     );
 
     // Change the controller if necessary.
-    if (oldSuperclusterConfig.isMutableSupercluster != _superclusterConfig.isMutableSupercluster || oldWidget.controller != widget.controller) {
+    if (oldSuperclusterConfig.isMutableSupercluster !=
+            _superclusterConfig.isMutableSupercluster ||
+        oldWidget.controller != widget.controller) {
       _controllerSubscription?.cancel();
-      _controllerSubscription = widget.controller?.stream.listen((event) => _onSuperclusterEvent(event));
+      _controllerSubscription = widget.controller?.stream
+          .listen((event) => _onSuperclusterEvent(event));
     }
 
     if (oldSuperclusterConfig.mapStateZoomLimitsHaveChanged(widget.mapCamera)) {
-      debugPrint('WARNING: Changes to the FlutterMapState have caused a rebuild of '
+      debugPrint(
+          'WARNING: Changes to the FlutterMapState have caused a rebuild of '
           'the Supercluster clusters. This can be a slow operation and '
           'should be avoided whenever possible.');
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _initializeSupercluster(_superclusterCompleter.operation.valueOrCancellation().then((supercluster) => supercluster?.getLeaves().toList() ?? []));
+        _initializeSupercluster(_superclusterCompleter.operation
+            .valueOrCancellation()
+            .then((supercluster) => supercluster?.getLeaves().toList() ?? []));
       });
     } else if (oldSuperclusterConfig != _superclusterConfig) {
-      debugPrint('WARNING: Changes to the Supercluster options have caused a rebuild '
+      debugPrint(
+          'WARNING: Changes to the Supercluster options have caused a rebuild '
           'of the Supercluster clusters. This can be a slow operation and '
           'should be avoided whenever possible.');
 
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _initializeSupercluster(_superclusterCompleter.operation.valueOrCancellation().then((supercluster) => supercluster?.getLeaves().toList() ?? []));
+        _initializeSupercluster(_superclusterCompleter.operation
+            .valueOrCancellation()
+            .then((supercluster) => supercluster?.getLeaves().toList() ?? []));
       });
     }
 
@@ -182,7 +197,8 @@ class _SuperclusterLayerImplState extends State<SuperclusterLayerImpl> with Tick
       ),
     );
     markersFuture.catchError((_) => <Marker>[]).then((markers) {
-      if (_superclusterCompleter.isCompleted || _superclusterCompleter.isCanceled) {
+      if (_superclusterCompleter.isCompleted ||
+          _superclusterCompleter.isCanceled) {
         setState(() {
           _superclusterCompleter = CancelableCompleter();
         });
@@ -198,7 +214,8 @@ class _SuperclusterLayerImplState extends State<SuperclusterLayerImpl> with Tick
         _onMarkersChange();
         _expandedClusterManager.clear();
         widget.popupOptions?.popupController.hidePopupsWhereSpec(
-          (popupSpec) => popupSpec.namespace == SuperclusterLayer.popupNamespace,
+          (popupSpec) =>
+              popupSpec.namespace == SuperclusterLayer.popupNamespace,
         );
       });
 
@@ -225,7 +242,8 @@ class _SuperclusterLayerImplState extends State<SuperclusterLayerImpl> with Tick
     );
   }
 
-  Widget _wrapWithPopupStateIfPopupsEnabled(Widget Function(PopupState? popupState) builder) {
+  Widget _wrapWithPopupStateIfPopupsEnabled(
+      Widget Function(PopupState? popupState) builder) {
     if (widget.popupOptions == null) return builder(null);
 
     return InheritOrCreatePopupScope(
@@ -241,7 +259,8 @@ class _SuperclusterLayerImplState extends State<SuperclusterLayerImpl> with Tick
   }
 
   Widget _clustersAndMarkers() {
-    final paddedBounds = widget.mapCamera.paddedMapBounds(widget.clusterWidgetSize);
+    final paddedBounds =
+        widget.mapCamera.paddedMapBounds(widget.clusterWidgetSize);
 
     return FutureBuilder<Supercluster<Marker>>(
       future: _superclusterCompleter.operation.value,
@@ -249,7 +268,9 @@ class _SuperclusterLayerImplState extends State<SuperclusterLayerImpl> with Tick
         final supercluster = snapshot.data;
         if (supercluster == null) return const SizedBox.shrink();
 
-        return Stack(children: [..._buildClustersAndMarkers(supercluster, paddedBounds)]);
+        return Stack(children: [
+          ..._buildClustersAndMarkers(supercluster, paddedBounds)
+        ]);
       },
     );
   }
@@ -258,7 +279,10 @@ class _SuperclusterLayerImplState extends State<SuperclusterLayerImpl> with Tick
     Supercluster<Marker> supercluster,
     LatLngBounds paddedBounds,
   ) sync* {
-    final selectedMarkerBuilder = widget.popupOptions != null && _popupState!.selectedMarkers.isNotEmpty ? widget.popupOptions!.selectedMarkerBuilder : null;
+    final selectedMarkerBuilder =
+        widget.popupOptions != null && _popupState!.selectedMarkers.isNotEmpty
+            ? widget.popupOptions!.selectedMarkerBuilder
+            : null;
     final List<LayerPoint<Marker>> selectedLayerPoints = [];
     final List<LayerCluster<Marker>> clusters = [];
 
@@ -276,7 +300,8 @@ class _SuperclusterLayerImplState extends State<SuperclusterLayerImpl> with Tick
         continue;
       }
       layerElement as LayerPoint<Marker>;
-      if (selectedMarkerBuilder != null && _popupState!.selectedMarkers.contains(layerElement.originalPoint)) {
+      if (selectedMarkerBuilder != null &&
+          _popupState!.selectedMarkers.contains(layerElement.originalPoint)) {
         selectedLayerPoints.add(layerElement);
         continue;
       }
@@ -306,7 +331,9 @@ class _SuperclusterLayerImplState extends State<SuperclusterLayerImpl> with Tick
   }) {
     final marker = mapPoint.originalPoint;
 
-    final markerChild = !selected ? marker.child : widget.popupOptions!.selectedMarkerBuilder!(context, marker);
+    final markerChild = !selected
+        ? marker.child
+        : widget.popupOptions!.selectedMarkerBuilder!(context, marker);
 
     return MarkerWidget(
       mapCamera: widget.mapCamera,
@@ -334,9 +361,13 @@ class _SuperclusterLayerImplState extends State<SuperclusterLayerImpl> with Tick
     ExpandedCluster expandedCluster,
   ) {
     final selectedMarkerBuilder = widget.popupOptions?.selectedMarkerBuilder;
-    final Widget Function(BuildContext context, Marker marker) markerBuilder = selectedMarkerBuilder == null
-        ? ((context, marker) => marker.child)
-        : ((context, marker) => _popupState?.selectedMarkers.contains(marker) == true ? selectedMarkerBuilder(context, marker) : marker.child);
+    final Widget Function(BuildContext context, Marker marker) markerBuilder =
+        selectedMarkerBuilder == null
+            ? ((context, marker) => marker.child)
+            : ((context, marker) =>
+                _popupState?.selectedMarkers.contains(marker) == true
+                    ? selectedMarkerBuilder(context, marker)
+                    : marker.child);
 
     return ExpandableClusterWidget(
       mapCamera: widget.mapCamera,
@@ -346,8 +377,10 @@ class _SuperclusterLayerImplState extends State<SuperclusterLayerImpl> with Tick
       clusterAlignment: widget.clusterAlignment,
       markerBuilder: markerBuilder,
       onCollapse: () {
-        widget.popupOptions?.popupController.hidePopupsOnlyFor(expandedCluster.markers.toList());
-        _expandedClusterManager.collapseThenRemove(expandedCluster.layerCluster);
+        widget.popupOptions?.popupController
+            .hidePopupsOnlyFor(expandedCluster.markers.toList());
+        _expandedClusterManager
+            .collapseThenRemove(expandedCluster.layerCluster);
       },
       onMarkerTap: _onMarkerTap,
     );
@@ -368,7 +401,8 @@ class _SuperclusterLayerImplState extends State<SuperclusterLayerImpl> with Tick
         () => ExpandedCluster(
           vsync: this,
           mapCamera: widget.mapCamera,
-          layerPoints: supercluster.childrenOf(layerCluster).cast<LayerPoint<Marker>>(),
+          layerPoints:
+              supercluster.childrenOf(layerCluster).cast<LayerPoint<Marker>>(),
           layerCluster: layerCluster,
           clusterSplayDelegate: widget.clusterSplayDelegate,
         ),
@@ -391,7 +425,9 @@ class _SuperclusterLayerImplState extends State<SuperclusterLayerImpl> with Tick
       return Future.value();
     }
 
-    final moveMap = moveMapOverride ?? widget.moveMap ?? (center, zoom) => widget.mapController.move(center, zoom);
+    final moveMap = moveMapOverride ??
+        widget.moveMap ??
+        (center, zoom) => widget.mapController.move(center, zoom);
 
     return moveMap.call(center, zoom);
   }
@@ -428,13 +464,18 @@ class _SuperclusterLayerImplState extends State<SuperclusterLayerImpl> with Tick
 
   void _onMarkersChange() {
     _superclusterCompleter.operation.value.then((supercluster) {
-      final aggregatedClusterData = widget.calculateAggregatedClusterData ? supercluster.aggregatedClusterData() : null;
-      final clusterData = aggregatedClusterData == null ? null : (aggregatedClusterData as ClusterData);
+      final aggregatedClusterData = widget.calculateAggregatedClusterData
+          ? supercluster.aggregatedClusterData()
+          : null;
+      final clusterData = aggregatedClusterData == null
+          ? null
+          : (aggregatedClusterData as ClusterData);
       final superclusterState = SuperclusterStateImpl(
         aggregatedClusterData: clusterData,
         supercluster: supercluster,
       );
-      InheritedSuperclusterScope.of(context, listen: false).setSuperclusterState(superclusterState);
+      InheritedSuperclusterScope.of(context, listen: false)
+          .setSuperclusterState(superclusterState);
     });
   }
 
@@ -444,14 +485,17 @@ class _SuperclusterLayerImplState extends State<SuperclusterLayerImpl> with Tick
     required FutureOr<void> Function(LatLng center, double zoom)? moveMap,
   }) async {
     // Create a shorthand for the map movement function.
-    move(center, zoom) => _moveMapIfNotAt(center, zoom, moveMapOverride: moveMap);
+    move(center, zoom) =>
+        _moveMapIfNotAt(center, zoom, moveMapOverride: moveMap);
 
     /// Find the Marker's LayerPoint.
     final supercluster = await _superclusterCompleter.operation.value;
-    LayerPoint<Marker>? foundLayerPoint = supercluster.layerPointMatching(markerMatcher);
+    LayerPoint<Marker>? foundLayerPoint =
+        supercluster.layerPointMatching(markerMatcher);
     if (foundLayerPoint == null) return;
 
-    final markerInSplayCluster = _superclusterConfig.maxZoom < foundLayerPoint.lowestZoom;
+    final markerInSplayCluster =
+        _superclusterConfig.maxZoom < foundLayerPoint.lowestZoom;
     if (markerInSplayCluster) {
       await _moveToSplayClusterMarker(
         supercluster: supercluster,
@@ -490,16 +534,21 @@ class _SuperclusterLayerImplState extends State<SuperclusterLayerImpl> with Tick
     createExpandedCluster() => ExpandedCluster(
           vsync: this,
           mapCamera: widget.mapCamera,
-          layerPoints: supercluster.childrenOf(layerCluster).cast<LayerPoint<Marker>>(),
+          layerPoints:
+              supercluster.childrenOf(layerCluster).cast<LayerPoint<Marker>>(),
           layerCluster: layerCluster,
           clusterSplayDelegate: widget.clusterSplayDelegate,
         );
 
     // Find or create the marker's ExpandedCluster and use it to find the
     // DisplacedMarker.
-    final expandedClusterBeforeMovement = _expandedClusterManager.forLayerCluster(layerCluster);
-    final createdExpandedCluster = expandedClusterBeforeMovement != null ? null : createExpandedCluster();
-    final displacedMarker = (expandedClusterBeforeMovement ?? createdExpandedCluster)!.markersToDisplacedMarkers[layerPoint.originalPoint]!;
+    final expandedClusterBeforeMovement =
+        _expandedClusterManager.forLayerCluster(layerCluster);
+    final createdExpandedCluster =
+        expandedClusterBeforeMovement != null ? null : createExpandedCluster();
+    final displacedMarker =
+        (expandedClusterBeforeMovement ?? createdExpandedCluster)!
+            .markersToDisplacedMarkers[layerPoint.originalPoint]!;
 
     // Move to the DisplacedMarker.
     await move(
@@ -547,7 +596,8 @@ class _SuperclusterLayerImplState extends State<SuperclusterLayerImpl> with Tick
         });
       case RemoveMarkerEvent():
         _superclusterCompleter.operation.then((supercluster) {
-          final removed = (supercluster as SuperclusterMutable<Marker>).remove(event.marker);
+          final removed = (supercluster as SuperclusterMutable<Marker>)
+              .remove(event.marker);
 
           if (removed) {
             _removeExpandedClustersOfRemovedClusters(supercluster);
@@ -557,7 +607,8 @@ class _SuperclusterLayerImplState extends State<SuperclusterLayerImpl> with Tick
         });
       case RemoveAllMarkerEvent():
         _superclusterCompleter.operation.then((supercluster) {
-          final removed = (supercluster as SuperclusterMutable<Marker>).removeAll(event.markers);
+          final removed = (supercluster as SuperclusterMutable<Marker>)
+              .removeAll(event.markers);
           if (removed) {
             _removeExpandedClustersOfRemovedClusters(supercluster);
             _hidePopupsInNamespaceFor(event.markers);
@@ -569,7 +620,8 @@ class _SuperclusterLayerImplState extends State<SuperclusterLayerImpl> with Tick
         _expandedClusterManager.clear();
       case ModifyMarkerEvent():
         _superclusterCompleter.operation.then((supercluster) {
-          final modified = (supercluster as SuperclusterMutable<Marker>).modifyPointData(
+          final modified =
+              (supercluster as SuperclusterMutable<Marker>).modifyPointData(
             event.oldMarker,
             event.newMarker,
             updateParentClusters: event.updateParentClusters,
@@ -650,20 +702,25 @@ class _SuperclusterLayerImplState extends State<SuperclusterLayerImpl> with Tick
     setState(() {});
   }
 
-  void _removeExpandedClustersOfRemovedClusters(SuperclusterMutable<Marker> supercluster) {
-    final toRemove = _expandedClusterManager.all.where((e) => !supercluster.containsElement(e.layerCluster));
+  void _removeExpandedClustersOfRemovedClusters(
+      SuperclusterMutable<Marker> supercluster) {
+    final toRemove = _expandedClusterManager.all
+        .where((e) => !supercluster.containsElement(e.layerCluster));
     if (toRemove.isNotEmpty) {
       _expandedClusterManager.removeAllImmediately(toRemove);
     }
   }
 
   void _hidePopupsInNamespaceFor(Iterable<Marker> markers) {
-    widget.popupOptions?.popupController.hidePopupsWhereSpec((spec) => spec.namespace == SuperclusterLayer.popupNamespace && markers.contains(spec.marker));
+    widget.popupOptions?.popupController.hidePopupsWhereSpec((spec) =>
+        spec.namespace == SuperclusterLayer.popupNamespace &&
+        markers.contains(spec.marker));
   }
 
   void _modifyDisplacedMarker(Marker oldMarker, Marker newMarker) async {
     final supercluster = await _superclusterCompleter.operation.value;
-    LayerPoint<Marker>? foundLayerPoint = supercluster.layerPointMatching(MarkerMatcher.equalsMarker(oldMarker));
+    LayerPoint<Marker>? foundLayerPoint =
+        supercluster.layerPointMatching(MarkerMatcher.equalsMarker(oldMarker));
     if (foundLayerPoint == null) return;
 
     // Is the marker part of a splay cluster?
@@ -673,15 +730,22 @@ class _SuperclusterLayerImplState extends State<SuperclusterLayerImpl> with Tick
 
       // Find the marker's ExpandedCluster
       // and use it to find the DisplacedMarker.
-      final expandedClusterBeforeMovement = _expandedClusterManager.forLayerCluster(layerCluster);
+      final expandedClusterBeforeMovement =
+          _expandedClusterManager.forLayerCluster(layerCluster);
 
       if (expandedClusterBeforeMovement != null) {
-        List<DisplacedMarker> displacedMarkers = expandedClusterBeforeMovement.displacedMarkers;
+        List<DisplacedMarker> displacedMarkers =
+            expandedClusterBeforeMovement.displacedMarkers;
         for (var i = 0; i < displacedMarkers.length; i++) {
           if (displacedMarkers[i].marker == oldMarker) {
             // exchange the DisplacedMarker
             // and make the new marker visible in the map
-            _expandedClusterManager.forLayerCluster(layerCluster)!.displacedMarkers[i] = DisplacedMarker(marker: newMarker, displacedPoint: displacedMarkers[i].displacedPoint);
+            _expandedClusterManager
+                    .forLayerCluster(layerCluster)!
+                    .displacedMarkers[i] =
+                DisplacedMarker(
+                    marker: newMarker,
+                    displacedPoint: displacedMarkers[i].displacedPoint);
           }
         }
       }

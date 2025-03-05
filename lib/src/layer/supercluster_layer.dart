@@ -84,7 +84,7 @@ class SuperclusterLayer extends StatelessWidget {
 
   /// A builder used to override the override which is displayed whilst the
   /// supercluster index is being built.
-  final WidgetBuilder? loadingOverlayBuilder;
+  final Function(ConnectionState)? loadingOverlayBuilder;
 
   /// If provided popups will be enabled for markers. Depending on the provided
   /// options they will appear when markers are tapped or when triggered by a
