@@ -197,8 +197,9 @@ class _SuperclusterLayerImplState extends State<SuperclusterLayerImpl>
       ),
     );
     markersFuture.catchError((_) => <Marker>[]).then((markers) {
-      if (_superclusterCompleter.isCompleted ||
-          _superclusterCompleter.isCanceled) {
+      if (mounted &&
+          (_superclusterCompleter.isCompleted ||
+              _superclusterCompleter.isCanceled)) {
         setState(() {
           _superclusterCompleter = CancelableCompleter();
         });
@@ -464,6 +465,8 @@ class _SuperclusterLayerImplState extends State<SuperclusterLayerImpl>
 
   void _onMarkersChange() {
     _superclusterCompleter.operation.value.then((supercluster) {
+      // The layer can be disposed while the supercluster is being built.
+      if (!mounted) return;
       final aggregatedClusterData = widget.calculateAggregatedClusterData
           ? supercluster.aggregatedClusterData()
           : null;
